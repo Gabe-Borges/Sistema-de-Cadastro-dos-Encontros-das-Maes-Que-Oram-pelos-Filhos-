@@ -8,3 +8,5 @@ Descrição Geral:
 Oram pelos Filhos, de uma igreja. 
 O sistema deve permitir o cadastro das mães participantes, o gerenciamento dos encontros e serviços, e 
 a emissão de relatórios sobre as atividades realizadas."
+
+Projeto feito por Gabriel Borges de Toledo 2°ADS 
