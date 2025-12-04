@@ -18,6 +18,14 @@ public class EncontroDAO {
 
 
     public void salvarComEscala(Encontro encontro) throws SQLException {
+
+        // 🌟 NOVA VALIDAÇÃO: Impedir a criação de encontros em datas passadas.
+        LocalDate today = LocalDate.now();
+        if (encontro.getDataEncontro().isBefore(today)) {
+            throw new SQLException("Não é permitido criar um novo encontro em uma data passada.");
+        }
+        // -------------------------------------------------------------------------
+
         Connection conn = null;
         try {
             conn = ConnectionFactory.getConnection();
@@ -86,6 +94,13 @@ public class EncontroDAO {
     }
 
     public void atualizar(Encontro encontro) throws SQLException {
+
+        // Validação: permitir edição apenas de encontros futuros.
+        LocalDate today = LocalDate.now();
+        if (encontro.getDataEncontro().isBefore(today)) {
+            throw new SQLException("Não é permitido editar encontros que já ocorreram. Use a exclusão lógica se necessário.");
+        }
+
         Connection conn = null;
         PreparedStatement stmtUpdate = null;
         PreparedStatement stmtDelete = null;
@@ -130,11 +145,6 @@ public class EncontroDAO {
         return buscarEncontroGenerico(sql, pstmt -> pstmt.setInt(1, idEncontro));
     }
 
-    public Encontro buscarComEscalaPorData(LocalDate data) throws SQLException {
-        String sql = "SELECT id_encontro, data_encontro, excluido_logico FROM ENCONTRO WHERE data_encontro = ?";
-        return buscarEncontroGenerico(sql, pstmt -> pstmt.setDate(1, Date.valueOf(data)));
-    }
-
     private Encontro buscarEncontroGenerico(String sql, SqlParametros params) throws SQLException {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -144,7 +154,7 @@ public class EncontroDAO {
         try {
             conn = ConnectionFactory.getConnection();
             stmt = conn.prepareStatement(sql);
-            params.setarParametros(stmt); // Aplica o parâmetro (ID ou Data)
+            params.setarParametros(stmt);
             rs = stmt.executeQuery();
 
             if (rs.next()) {
@@ -153,7 +163,7 @@ public class EncontroDAO {
                         rs.getDate("data_encontro").toLocalDate(),
                         rs.getBoolean("excluido_logico")
                 );
-                // Carrega a escala
+                // Carrega a escala usando o método otimizado (fix N+1)
                 encontro.setServicos(carregarServicosDoEncontro(conn, encontro));
             }
         } finally {
@@ -187,7 +197,19 @@ public class EncontroDAO {
     }
 
     private List<ServicoEncontro> carregarServicosDoEncontro(Connection conn, Encontro encontro) throws SQLException {
-        String sql = "SELECT id_servico_encontro, id_servico_fixo, id_mae_responsavel, descricao_atividade FROM SERVICO_ENCONTRO WHERE id_encontro = ?";
+        // Método otimizado com JOIN (fix N+1)
+        String sql = "SELECT " +
+                "    SE.id_servico_encontro, " +
+                "    SE.descricao_atividade, " +
+                "    SF.id_servico_fixo, " +
+                "    SF.nome AS nome_servico, " +
+                "    M.id_mae, " +
+                "    M.nome AS nome_mae " +
+                "FROM SERVICO_ENCONTRO SE " +
+                "JOIN SERVICO_FIXO SF ON SE.id_servico_fixo = SF.id_servico_fixo " +
+                "LEFT JOIN MAE M ON SE.id_mae_responsavel = M.id_mae " +
+                "WHERE SE.id_encontro = ?";
+
         PreparedStatement stmt = null;
         ResultSet rs = null;
         List<ServicoEncontro> lista = new ArrayList<>();
@@ -198,13 +220,23 @@ public class EncontroDAO {
             rs = stmt.executeQuery();
 
             while (rs.next()) {
-                int idServicoFixo = rs.getInt("id_servico_fixo");
-                int idMae = rs.getInt("id_mae_responsavel");
-                boolean maeExiste = !rs.wasNull();
+                // 1. Criar ServicoFixo a partir dos dados do JOIN
+                ServicoFixo servico = new ServicoFixo(
+                        rs.getInt("id_servico_fixo"),
+                        rs.getString("nome_servico")
+                );
 
-                ServicoFixo servico = servicoFixoDAO.buscarPorId(idServicoFixo);
-                Mae mae = maeExiste ? maeDAO.buscarPorId(idMae) : null;
+                // 2. Criar Mae (se existir)
+                Mae mae = null;
+                int idMae = rs.getInt("id_mae");
+                if (!rs.wasNull()) {
+                    mae = new Mae(
+                            idMae,
+                            rs.getString("nome_mae")
+                    );
+                }
 
+                // 3. Criar ServicoEncontro
                 ServicoEncontro se = new ServicoEncontro(
                         rs.getInt("id_servico_encontro"),
                         encontro,
