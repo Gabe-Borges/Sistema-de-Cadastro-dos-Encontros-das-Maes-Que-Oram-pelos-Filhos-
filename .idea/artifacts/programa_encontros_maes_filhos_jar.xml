@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="programa-encontros-maes-filhos:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/programa_encontros_maes_filhos_jar</output-path>
+    <root id="archive" name="programa-encontros-maes-filhos.jar">
+      <element id="module-output" name="programa-encontros-maes-filhos" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/toedter/jcalendar/1.4/jcalendar-1.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/protobuf/protobuf-java/3.21.9/protobuf-java-3.21.9.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/mysql/mysql-connector-j/8.0.33/mysql-connector-j-8.0.33.jar" path-in-jar="/" />
+      <element id="library" level="project" name="Maven: com.google.protobuf:protobuf-java:3.21.9" />
+      <element id="library" level="project" name="Maven: com.mysql:mysql-connector-j:8.0.33" />
+      <element id="library" level="project" name="Maven: com.toedter:jcalendar:1.4" />
+    </root>
+  </artifact>
+</component>
